@@ -19,7 +19,7 @@
 set -euo pipefail
 
 # ── Configuration ──
-DOMAIN="limulidae.fr"
+DOMAIN="devlls.limulidae.fr"
 APP_DIR="/opt/limule"
 REPO_URL="https://github.com/brendanjany-del/Limule.git"
 BRANCH="claude/banking-data-pipeline-e8e8x"
@@ -235,7 +235,7 @@ cat > /etc/nginx/conf.d/limule.conf <<NGEOF
 server {
     listen 80;
     listen [::]:80;
-    server_name ${DOMAIN} www.${DOMAIN};
+    server_name ${DOMAIN};
 
     location /.well-known/acme-challenge/ {
         root /var/www/certbot;
@@ -250,7 +250,7 @@ server {
 server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
-    server_name ${DOMAIN} www.${DOMAIN};
+    server_name ${DOMAIN};
 
     ssl_certificate     /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
@@ -285,7 +285,7 @@ cat > /etc/nginx/conf.d/limule-temp.conf <<TMPEOF
 server {
     listen 80;
     listen [::]:80;
-    server_name ${DOMAIN} www.${DOMAIN};
+    server_name ${DOMAIN};
 
     location /.well-known/acme-challenge/ {
         root /var/www/certbot;
@@ -327,7 +327,7 @@ fi
 info "Obtention du certificat SSL pour ${DOMAIN}..."
 certbot certonly --webroot \
     -w /var/www/certbot \
-    -d "${DOMAIN}" -d "www.${DOMAIN}" \
+    -d "${DOMAIN}" \
     --non-interactive \
     --agree-tos \
     --email "admin@${DOMAIN}" \
