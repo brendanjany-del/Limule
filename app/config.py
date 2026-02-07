@@ -1,7 +1,10 @@
 """Configuration de l'application Limule."""
 
+import os
 from pathlib import Path
 from pydantic_settings import BaseSettings
+
+_db_path = Path(__file__).parent.parent / "limule.db"
 
 
 class Settings(BaseSettings):
@@ -9,9 +12,15 @@ class Settings(BaseSettings):
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
 
-    # Base de données
-    DATABASE_URL: str = "postgresql+asyncpg://limule:limule_secret@localhost:5432/limule"
-    DATABASE_URL_SYNC: str = "postgresql+psycopg2://limule:limule_secret@localhost:5432/limule"
+    # Base de données (SQLite par défaut pour dev, PostgreSQL en production)
+    DATABASE_URL: str = os.environ.get(
+        "DATABASE_URL",
+        f"sqlite+aiosqlite:///{_db_path}",
+    )
+    DATABASE_URL_SYNC: str = os.environ.get(
+        "DATABASE_URL_SYNC",
+        f"sqlite:///{_db_path}",
+    )
 
     # Redis / Celery
     REDIS_URL: str = "redis://localhost:6379/0"

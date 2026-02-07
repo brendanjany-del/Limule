@@ -96,6 +96,7 @@ class Pipeline:
             status=FluxStatus.RECEIVED,
         )
         self.db.add(flux)
+        self.db.flush()  # Assigner l'id au flux
 
         # Étape de réception
         step = ProcessingStep(

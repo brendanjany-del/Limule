@@ -16,6 +16,7 @@ from app.models.specification import (
     TableName, FileFormat, DataType, RuleSeverity, ExportFormat,
 )
 from app.models.processing import Etablissement
+from app.models import data as _data_models  # noqa: F401 - ensure data tables are created
 
 
 def seed():

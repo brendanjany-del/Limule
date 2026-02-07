@@ -45,7 +45,6 @@ class DataRow(Base):
         Index("ix_data_row_flux_table", "flux_id", "table_name"),
         Index("ix_data_row_status", "flux_id", "status"),
         Index("ix_data_row_business_key", "flux_id", "table_name", "business_key"),
-        Index("ix_data_row_data_gin", "data", postgresql_using="gin"),
     )
 
 

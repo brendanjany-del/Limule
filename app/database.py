@@ -1,4 +1,7 @@
-"""Configuration de la connexion à la base de données."""
+"""Configuration de la connexion à la base de données.
+
+Supporte PostgreSQL (production) et SQLite (développement / preview).
+"""
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
@@ -7,14 +10,14 @@ from sqlalchemy.orm import sessionmaker
 
 from app.config import settings
 
+_is_sqlite = settings.DATABASE_URL.startswith("sqlite")
+
 # Moteur async (pour FastAPI)
-async_engine = create_async_engine(
-    settings.DATABASE_URL,
-    echo=settings.DEBUG,
-    pool_size=20,
-    max_overflow=10,
-    pool_pre_ping=True,
-)
+_async_kwargs = {"echo": settings.DEBUG}
+if not _is_sqlite:
+    _async_kwargs.update(pool_size=20, max_overflow=10, pool_pre_ping=True)
+
+async_engine = create_async_engine(settings.DATABASE_URL, **_async_kwargs)
 
 AsyncSessionLocal = async_sessionmaker(
     async_engine,
@@ -22,14 +25,12 @@ AsyncSessionLocal = async_sessionmaker(
     expire_on_commit=False,
 )
 
-# Moteur sync (pour Celery workers)
-sync_engine = create_engine(
-    settings.DATABASE_URL_SYNC,
-    echo=settings.DEBUG,
-    pool_size=20,
-    max_overflow=10,
-    pool_pre_ping=True,
-)
+# Moteur sync (pour Celery workers / pipeline)
+_sync_kwargs = {"echo": settings.DEBUG}
+if not _is_sqlite:
+    _sync_kwargs.update(pool_size=20, max_overflow=10, pool_pre_ping=True)
+
+sync_engine = create_engine(settings.DATABASE_URL_SYNC, **_sync_kwargs)
 
 SyncSessionLocal = sessionmaker(bind=sync_engine)
 
