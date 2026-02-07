@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% set active_page = "exports" %}
+
+{% block title %}Exports Metier{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="section-title mb-0"><i class="bi bi-box-arrow-up-right"></i> Exports Metier</h4>
+    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#exportModal">
+        <i class="bi bi-play-fill"></i> Lancer un export
+    </button>
+</div>
+
+<!-- Suivi des exports -->
+<div class="card mb-4">
+    <div class="card-header bg-white"><h6 class="mb-0">Historique des exports</h6></div>
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Arrete</th>
+                    <th>Etablissement</th>
+                    <th>Perimetre metier</th>
+                    <th>Statut</th>
+                    <th>Lignes</th>
+                    <th>Fichiers</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for job in jobs %}
+            <tr>
+                <td>{{ job.arrete.date_arrete if job.arrete else '-' }}</td>
+                <td>{{ job.arrete.etablissement.code if job.arrete and job.arrete.etablissement else '-' }}</td>
+                <td>
+                    {% if job.perimeter %}
+                        <span class="badge bg-primary">{{ job.perimeter.code_metier }}</span>
+                        {{ job.perimeter.label }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>
+                    {% set s = job.status.value if job.status.value is defined else job.status %}
+                    {% if s == 'success' %}
+                        <span class="badge bg-success">Termine</span>
+                    {% elif s == 'running' %}
+                        <span class="badge bg-info">En cours</span>
+                    {% elif s == 'error' %}
+                        <span class="badge bg-danger" title="{{ job.error_message }}">Erreur</span>
+                    {% else %}
+                        <span class="badge bg-secondary">En attente</span>
+                    {% endif %}
+                </td>
+                <td>{{ job.total_records or 0 }}</td>
+                <td>
+                    {% if job.output_files %}
+                        {{ job.output_files|length }} fichier(s)
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>{{ job.completed_at.strftime('%d/%m/%Y %H:%M') if job.completed_at else '-' }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7" class="text-center text-muted py-4">Aucun export</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal export -->
+<div class="modal fade" id="exportModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">Lancer un export</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <form id="exportForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Arrete</label>
+                        <select name="arrete_id" class="form-select" required>
+                            {% for a in arretes %}
+                            <option value="{{ a.id }}">
+                                {{ a.date_arrete }} - {{ a.etablissement.code if a.etablissement else '?' }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Perimetre metier (optionnel)</label>
+                        <input type="text" name="perimeter_code" class="form-control" placeholder="Laisser vide pour tous les perimetres">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-play-fill"></i> Exporter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('exportForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const body = {
+        arrete_id: parseInt(fd.get('arrete_id')),
+        perimeter_code: fd.get('perimeter_code') || null,
+    };
+    const resp = await fetch('/api/exports', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(body),
+    });
+    if (resp.ok) location.reload();
+    else alert('Erreur: ' + (await resp.json()).detail);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+{% set active_page = "specifications" %}
+
+{% block title %}Specifications{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="section-title mb-0"><i class="bi bi-sliders"></i> Gestion des specifications</h4>
+    <div class="d-flex gap-2">
+        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#newVersionModal">
+            <i class="bi bi-plus-circle"></i> Nouvelle version
+        </button>
+        <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#copyVersionModal">
+            <i class="bi bi-copy"></i> Copier une version
+        </button>
+    </div>
+</div>
+
+<!-- Liste des versions -->
+<div class="card mb-4">
+    <div class="card-header bg-white"><h6 class="mb-0">Versions de specifications</h6></div>
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Label</th>
+                    <th>Description</th>
+                    <th>Active</th>
+                    <th>Creee le</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for v in versions %}
+            <tr>
+                <td><code class="fw-bold">{{ v.code }}</code></td>
+                <td>{{ v.label }}</td>
+                <td class="text-truncate" style="max-width: 200px;">{{ v.description or '-' }}</td>
+                <td>
+                    {% if v.is_active %}
+                        <span class="badge bg-success">Active</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Inactive</span>
+                    {% endif %}
+                </td>
+                <td>{{ v.created_at.strftime('%d/%m/%Y %H:%M') if v.created_at else '-' }}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary" onclick="loadVersionDetail({{ v.id }}, '{{ v.code }}')">
+                        <i class="bi bi-eye"></i> Details
+                    </button>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" class="text-center text-muted py-4">Aucune version</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Détail de la version sélectionnée -->
+<div id="version-detail" style="display:none;">
+    <div class="card mb-3">
+        <div class="card-header bg-white">
+            <ul class="nav nav-tabs card-header-tabs" role="tablist">
+                <li class="nav-item">
+                    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-tech">
+                        <i class="bi bi-file-earmark-code"></i> Specs techniques
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-func">
+                        <i class="bi bi-clipboard-check"></i> Regles fonctionnelles
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-ref">
+                        <i class="bi bi-book"></i> Referentiels
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-business">
+                        <i class="bi bi-building"></i> Perimetres metier
+                    </button>
+                </li>
+            </ul>
+        </div>
+        <div class="card-body">
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="tab-tech">
+                    <div id="tech-specs-content">Chargement...</div>
+                </div>
+                <div class="tab-pane fade" id="tab-func">
+                    <div id="func-rules-content">Chargement...</div>
+                </div>
+                <div class="tab-pane fade" id="tab-ref">
+                    <div id="ref-values-content">Chargement...</div>
+                </div>
+                <div class="tab-pane fade" id="tab-business">
+                    <div id="business-content">Chargement...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal nouvelle version -->
+<div class="modal fade" id="newVersionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">Nouvelle version</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <form id="newVersionForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Code</label>
+                        <input type="text" name="code" class="form-control" required placeholder="V2024_01">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Label</label>
+                        <input type="text" name="label" class="form-control" required placeholder="Version Janvier 2024">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea name="description" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Creer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal copier version -->
+<div class="modal fade" id="copyVersionModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">Copier une version</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <form id="copyVersionForm">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Version source</label>
+                            <select name="source_code" class="form-select" required>
+                                {% for v in versions %}
+                                <option value="{{ v.code }}">{{ v.code }} - {{ v.label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Code cible</label>
+                            <input type="text" name="target_code" class="form-control" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Label cible</label>
+                            <input type="text" name="target_label" class="form-control" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Description</label>
+                            <textarea name="description" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+                    <hr>
+                    <h6>Specifications a copier :</h6>
+                    <div class="form-check"><input class="form-check-input" type="checkbox" name="include_tech" checked id="chk_tech"><label class="form-check-label" for="chk_tech">Specifications techniques</label></div>
+                    <div class="form-check"><input class="form-check-input" type="checkbox" name="include_func" checked id="chk_func"><label class="form-check-label" for="chk_func">Regles fonctionnelles</label></div>
+                    <div class="form-check"><input class="form-check-input" type="checkbox" name="include_ref" checked id="chk_ref"><label class="form-check-label" for="chk_ref">Referentiels</label></div>
+                    <div class="form-check"><input class="form-check-input" type="checkbox" name="include_business" checked id="chk_biz"><label class="form-check-label" for="chk_biz">Perimetres metier</label></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Copier</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentVersionId = null;
+
+async function loadVersionDetail(versionId, versionCode) {
+    currentVersionId = versionId;
+    document.getElementById('version-detail').style.display = 'block';
+
+    // Charger les specs techniques
+    const techResp = await fetch(`/api/specifications/versions/${versionId}/tech-specs`);
+    const techSpecs = await techResp.json();
+    let techHtml = '<table class="table table-sm"><thead><tr><th>Table</th><th>Format</th><th>Separateur</th><th>Encodage</th><th>Champs</th></tr></thead><tbody>';
+    for (const spec of techSpecs) {
+        techHtml += `<tr><td><strong>${spec.table_name}</strong></td><td>${spec.file_format}</td><td><code>${spec.separator||''}</code></td><td>${spec.encoding||''}</td><td>${spec.fields ? spec.fields.length : 0} champs</td></tr>`;
+        if (spec.fields && spec.fields.length > 0) {
+            techHtml += '<tr><td colspan="5"><table class="table table-sm table-bordered mb-0" style="font-size:0.8rem;"><thead><tr><th>Pos</th><th>Nom</th><th>Label</th><th>Type</th><th>Nullable</th><th>Cle</th><th>Ref</th></tr></thead><tbody>';
+            for (const f of spec.fields) {
+                techHtml += `<tr><td>${f.position}</td><td><code>${f.field_name}</code></td><td>${f.field_label||''}</td><td>${f.data_type}</td><td>${f.is_nullable?'Oui':'Non'}</td><td>${f.is_part_of_key?'Oui':''}</td><td>${f.referentiel_code||''}</td></tr>`;
+            }
+            techHtml += '</tbody></table></td></tr>';
+        }
+    }
+    techHtml += '</tbody></table>';
+    if (techSpecs.length === 0) techHtml = '<p class="text-muted">Aucune specification technique.</p>';
+    document.getElementById('tech-specs-content').innerHTML = techHtml;
+
+    // Charger les règles fonctionnelles
+    const funcResp = await fetch(`/api/specifications/versions/${versionId}/func-rules`);
+    const funcRules = await funcResp.json();
+    let funcHtml = '<table class="table table-sm"><thead><tr><th>Code</th><th>Nom</th><th>Table</th><th>Severite</th><th>Condition</th><th>Validation</th><th>Actif</th></tr></thead><tbody>';
+    for (const r of funcRules) {
+        funcHtml += `<tr><td><code>${r.rule_code}</code></td><td>${r.rule_name}</td><td>${r.table_name}</td><td><span class="badge ${r.severity==='blocking'?'bg-danger':'bg-info'}">${r.severity}</span></td><td style="max-width:200px;font-size:0.75rem;">${JSON.stringify(r.condition_expr||{})}</td><td style="max-width:200px;font-size:0.75rem;">${JSON.stringify(r.validation_expr)}</td><td>${r.is_active?'Oui':'Non'}</td></tr>`;
+    }
+    funcHtml += '</tbody></table>';
+    if (funcRules.length === 0) funcHtml = '<p class="text-muted">Aucune regle fonctionnelle.</p>';
+    document.getElementById('func-rules-content').innerHTML = funcHtml;
+
+    // Charger les référentiels
+    const refResp = await fetch(`/api/specifications/versions/${versionId}/ref-values`);
+    const refValues = await refResp.json();
+    const refGroups = {};
+    for (const r of refValues) {
+        if (!refGroups[r.referentiel_code]) refGroups[r.referentiel_code] = [];
+        refGroups[r.referentiel_code].push(r);
+    }
+    let refHtml = '';
+    for (const [code, values] of Object.entries(refGroups)) {
+        refHtml += `<h6><code>${code}</code> (${values.length} valeurs)</h6><div class="mb-3 d-flex flex-wrap gap-1">`;
+        for (const v of values.slice(0, 20)) {
+            refHtml += `<span class="badge bg-light text-dark border">${v.value}${v.label ? ' - '+v.label : ''}</span>`;
+        }
+        if (values.length > 20) refHtml += `<span class="badge bg-secondary">+${values.length-20} autres</span>`;
+        refHtml += '</div>';
+    }
+    if (!refHtml) refHtml = '<p class="text-muted">Aucun referentiel.</p>';
+    document.getElementById('ref-values-content').innerHTML = refHtml;
+
+    // Charger les périmètres métier
+    const bizResp = await fetch(`/api/specifications/versions/${versionId}/perimeters`);
+    const perimeters = await bizResp.json();
+    let bizHtml = '<div class="row g-3">';
+    for (const p of perimeters) {
+        bizHtml += `<div class="col-md-6"><div class="card"><div class="card-body"><h6><span class="badge bg-primary">${p.code_metier}</span> ${p.label}</h6>`;
+        if (p.description) bizHtml += `<p class="small text-muted">${p.description}</p>`;
+        if (p.filter_rules && p.filter_rules.length > 0) {
+            bizHtml += '<p class="small mb-1"><strong>Filtres :</strong></p><ul class="small">';
+            for (const f of p.filter_rules) {
+                bizHtml += `<li>${f.table}.${f.field} ${f.operator} ${JSON.stringify(f.value)}</li>`;
+            }
+            bizHtml += '</ul>';
+        }
+        if (p.export_specs && p.export_specs.length > 0) {
+            bizHtml += `<p class="small mb-0"><strong>Exports :</strong> ${p.export_specs.map(e => e.table_name).join(', ')}</p>`;
+        }
+        bizHtml += '</div></div></div>';
+    }
+    bizHtml += '</div>';
+    if (perimeters.length === 0) bizHtml = '<p class="text-muted">Aucun perimetre metier.</p>';
+    document.getElementById('business-content').innerHTML = bizHtml;
+}
+
+document.getElementById('newVersionForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const body = { code: fd.get('code'), label: fd.get('label'), description: fd.get('description') };
+    const resp = await fetch('/api/specifications/versions', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(body),
+    });
+    if (resp.ok) location.reload();
+    else alert('Erreur: ' + (await resp.json()).detail);
+});
+
+document.getElementById('copyVersionForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const body = {
+        source_code: fd.get('source_code'),
+        target_code: fd.get('target_code'),
+        target_label: fd.get('target_label'),
+        description: fd.get('description'),
+        include_tech: !!fd.get('include_tech'),
+        include_func: !!fd.get('include_func'),
+        include_ref: !!fd.get('include_ref'),
+        include_business: !!fd.get('include_business'),
+    };
+    const resp = await fetch('/api/specifications/versions/copy', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(body),
+    });
+    if (resp.ok) location.reload();
+    else alert('Erreur: ' + (await resp.json()).detail);
+});
+</script>
+{% endblock %}

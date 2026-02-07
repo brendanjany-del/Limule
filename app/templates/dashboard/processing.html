@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+{% set active_page = "processing" %}
+
+{% block title %}Suivi des traitements{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="section-title mb-0"><i class="bi bi-gear-wide-connected"></i> Suivi des traitements</h4>
+    <div>
+        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#uploadModal">
+            <i class="bi bi-upload"></i> Charger un flux
+        </button>
+    </div>
+</div>
+
+<!-- Filtres -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-auto">
+                <label class="form-label small">Etablissement</label>
+                <select class="form-select form-select-sm" name="etab">
+                    <option value="">Tous</option>
+                    {% for e in etablissements %}
+                    <option value="{{ e.code }}">{{ e.code }} - {{ e.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-auto">
+                <button class="btn btn-sm btn-outline-primary">Filtrer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Arrêtés et flux -->
+{% for arrete in arretes %}
+<div class="card mb-3">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <div>
+            <strong>Arrete {{ arrete.date_arrete }}</strong>
+            <span class="text-muted ms-2">{{ arrete.etablissement.code if arrete.etablissement else '?' }} - {{ arrete.etablissement.name if arrete.etablissement else '' }}</span>
+            <span class="badge bg-secondary ms-2">{{ arrete.version.code if arrete.version else '?' }}</span>
+        </div>
+        <div class="d-flex gap-2">
+            {% if arrete.status == 'valide' %}
+                <span class="badge bg-success">Valide</span>
+            {% elif arrete.status == 'erreur' %}
+                <span class="badge bg-danger">Erreur</span>
+            {% else %}
+                <span class="badge bg-info">En cours</span>
+            {% endif %}
+            <button class="btn btn-outline-primary btn-sm"
+                    onclick="processArrete({{ arrete.id }})">
+                <i class="bi bi-play-fill"></i> Traiter tout
+            </button>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+            <thead>
+                <tr>
+                    <th>Fichier</th>
+                    <th>Table</th>
+                    <th>Pipeline</th>
+                    <th class="text-end">Total</th>
+                    <th class="text-end">Valides</th>
+                    <th class="text-end">Rej. Tech</th>
+                    <th class="text-end">Rej. Fonc</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for flux in arrete.flux %}
+            <tr id="flux-row-{{ flux.id }}">
+                <td class="text-truncate" style="max-width: 180px;" title="{{ flux.file_name }}">
+                    {{ flux.file_name }}
+                </td>
+                <td><span class="badge bg-light text-dark">{{ flux.table_name }}</span></td>
+                <td>
+                    {% set s = flux.status.value if flux.status.value is defined else flux.status %}
+                    <!-- Pipeline visuel -->
+                    <span class="pipeline-step {{ 'success' if s not in ['received'] else 'pending' }}">
+                        <i class="bi bi-inbox"></i> Recu
+                    </span>
+                    <i class="bi bi-chevron-right text-muted" style="font-size:0.6rem;"></i>
+                    <span class="pipeline-step {{ 'success' if s in ['loaded','tech_validating','tech_validated','func_validating','func_validated','exporting','exported'] else ('running' if s == 'loading' else ('error' if s == 'error' else 'pending')) }}">
+                        <i class="bi bi-database"></i> Charge
+                    </span>
+                    <i class="bi bi-chevron-right text-muted" style="font-size:0.6rem;"></i>
+                    <span class="pipeline-step {{ 'success' if s in ['tech_validated','func_validating','func_validated','exporting','exported'] else ('running' if s == 'tech_validating' else 'pending') }}">
+                        <i class="bi bi-check2-square"></i> Tech
+                    </span>
+                    <i class="bi bi-chevron-right text-muted" style="font-size:0.6rem;"></i>
+                    <span class="pipeline-step {{ 'success' if s in ['func_validated','exporting','exported'] else ('running' if s == 'func_validating' else 'pending') }}">
+                        <i class="bi bi-clipboard-check"></i> Fonc
+                    </span>
+                    <i class="bi bi-chevron-right text-muted" style="font-size:0.6rem;"></i>
+                    <span class="pipeline-step {{ 'success' if s == 'exported' else ('running' if s == 'exporting' else 'pending') }}">
+                        <i class="bi bi-box-arrow-up-right"></i> Export
+                    </span>
+                </td>
+                <td class="text-end">{{ flux.total_lines or 0 }}</td>
+                <td class="text-end text-success fw-bold">{{ flux.valid_lines or 0 }}</td>
+                <td class="text-end text-warning">{{ flux.tech_rejected_lines or 0 }}</td>
+                <td class="text-end text-danger">{{ flux.func_rejected_lines or 0 }}</td>
+                <td>
+                    <button class="btn btn-outline-primary btn-sm"
+                            onclick="processFlux({{ flux.id }})" title="Traiter">
+                        <i class="bi bi-play-fill"></i>
+                    </button>
+                    <a href="/data-viewer?flux_id={{ flux.id }}" class="btn btn-outline-secondary btn-sm" title="Voir donnees">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    <a href="/rejections?flux_id={{ flux.id }}" class="btn btn-outline-warning btn-sm" title="Voir rejets">
+                        <i class="bi bi-exclamation-triangle"></i>
+                    </a>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="8" class="text-center text-muted py-3">Aucun flux pour cet arrete</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="text-center text-muted py-5">
+    <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+    <p class="mt-2">Aucun arrete. Chargez un premier flux pour commencer.</p>
+</div>
+{% endfor %}
+
+<!-- Modal upload -->
+<div class="modal fade" id="uploadModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Charger un flux</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="uploadForm" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Fichier</label>
+                        <input type="file" name="file" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Code etablissement</label>
+                        <input type="text" name="etablissement_code" class="form-control" required placeholder="ETB001">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Date d'arrete</label>
+                        <input type="date" name="date_arrete" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Table</label>
+                        <select name="table_name" class="form-select" required>
+                            <option value="contrat">Contrat</option>
+                            <option value="tiers">Tiers</option>
+                            <option value="titre">Titre</option>
+                            <option value="lien">Lien</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Version specifications</label>
+                        <input type="text" name="version_code" class="form-control" required placeholder="V2024_01">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-upload"></i> Charger</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function processFlux(fluxId) {
+    if (!confirm('Lancer le traitement de ce flux ?')) return;
+    try {
+        const resp = await fetch(`/api/flux/${fluxId}/process`, { method: 'POST' });
+        if (resp.ok) {
+            location.reload();
+        } else {
+            const err = await resp.json();
+            alert('Erreur: ' + (err.detail || 'Erreur inconnue'));
+        }
+    } catch(e) { alert('Erreur reseau'); }
+}
+
+async function processArrete(arreteId) {
+    if (!confirm('Lancer le traitement de tous les flux de cet arrete ?')) return;
+    try {
+        const resp = await fetch(`/api/arretes/${arreteId}/process`, { method: 'POST' });
+        if (resp.ok) {
+            location.reload();
+        } else {
+            const err = await resp.json();
+            alert('Erreur: ' + (err.detail || 'Erreur inconnue'));
+        }
+    } catch(e) { alert('Erreur reseau'); }
+}
+
+document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    try {
+        const resp = await fetch('/api/flux/upload', { method: 'POST', body: formData });
+        if (resp.ok) {
+            location.reload();
+        } else {
+            const err = await resp.json();
+            alert('Erreur: ' + (err.detail || 'Erreur inconnue'));
+        }
+    } catch(e) { alert('Erreur reseau'); }
+});
+</script>
+{% endblock %}

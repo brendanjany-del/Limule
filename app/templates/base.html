@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="fr" data-bs-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Limule{% endblock %} - Pipeline Bancaire</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root {
+            --limule-primary: #1a365d;
+            --limule-accent: #2b6cb0;
+            --limule-success: #38a169;
+            --limule-danger: #e53e3e;
+            --limule-warning: #d69e2e;
+        }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; }
+        .sidebar {
+            min-height: 100vh;
+            background: var(--limule-primary);
+            width: 260px;
+            position: fixed;
+            top: 0; left: 0;
+            z-index: 1000;
+        }
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.7);
+            padding: 0.75rem 1.25rem;
+            border-radius: 0.5rem;
+            margin: 0.15rem 0.75rem;
+            font-size: 0.9rem;
+        }
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            color: #fff;
+            background: rgba(255,255,255,0.15);
+        }
+        .sidebar .nav-link i { width: 24px; text-align: center; margin-right: 8px; }
+        .main-content { margin-left: 260px; padding: 1.5rem; background: #f8f9fa; min-height: 100vh; }
+        .brand { color: #fff; font-size: 1.4rem; font-weight: 700; padding: 1.25rem; letter-spacing: 1px; }
+        .brand small { font-size: 0.65rem; opacity: 0.6; display: block; font-weight: 400; }
+        .stat-card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            transition: transform 0.15s;
+        }
+        .stat-card:hover { transform: translateY(-2px); }
+        .stat-card .stat-value { font-size: 1.8rem; font-weight: 700; }
+        .stat-card .stat-label { font-size: 0.8rem; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; }
+        .badge-status {
+            font-size: 0.75rem;
+            padding: 0.35em 0.65em;
+            border-radius: 6px;
+        }
+        .table th { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: #718096; border-bottom-width: 1px; }
+        .table td { vertical-align: middle; font-size: 0.9rem; }
+        .pipeline-step { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; }
+        .pipeline-step.success { background: #c6f6d5; color: #276749; }
+        .pipeline-step.running { background: #bee3f8; color: #2a4365; }
+        .pipeline-step.error { background: #fed7d7; color: #9b2c2c; }
+        .pipeline-step.pending { background: #e2e8f0; color: #4a5568; }
+        .section-title { font-weight: 600; color: var(--limule-primary); margin-bottom: 1rem; }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Sidebar -->
+    <nav class="sidebar d-flex flex-column">
+        <div class="brand">
+            <i class="bi bi-tsunami"></i> LIMULE
+            <small>Pipeline Bancaire Reglementaire</small>
+        </div>
+        <hr class="mx-3" style="border-color: rgba(255,255,255,0.15);">
+        <ul class="nav flex-column flex-grow-1">
+            <li class="nav-item">
+                <a class="nav-link {% if active_page == 'dashboard' %}active{% endif %}" href="/">
+                    <i class="bi bi-speedometer2"></i> Tableau de bord
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if active_page == 'processing' %}active{% endif %}" href="/processing">
+                    <i class="bi bi-gear-wide-connected"></i> Traitements
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if active_page == 'data_viewer' %}active{% endif %}" href="/data-viewer">
+                    <i class="bi bi-table"></i> Donnees
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if active_page == 'rejections' %}active{% endif %}" href="/rejections">
+                    <i class="bi bi-exclamation-triangle"></i> Rejets
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if active_page == 'exports' %}active{% endif %}" href="/exports">
+                    <i class="bi bi-box-arrow-up-right"></i> Exports Metier
+                </a>
+            </li>
+            <hr class="mx-3" style="border-color: rgba(255,255,255,0.15);">
+            <li class="nav-item">
+                <a class="nav-link {% if active_page == 'specifications' %}active{% endif %}" href="/specifications">
+                    <i class="bi bi-sliders"></i> Specifications
+                </a>
+            </li>
+        </ul>
+        <div class="p-3 text-center" style="color: rgba(255,255,255,0.3); font-size: 0.7rem;">
+            Limule v1.0 &mdash; Pipeline Bancaire
+        </div>
+    </nav>
+
+    <!-- Main content -->
+    <div class="main-content">
+        {% block content %}{% endblock %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

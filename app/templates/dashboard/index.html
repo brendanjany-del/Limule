@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% set active_page = "dashboard" %}
+
+{% block title %}Tableau de bord{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="section-title mb-0"><i class="bi bi-speedometer2"></i> Tableau de bord</h4>
+    <span class="text-muted small">Derniere mise a jour : maintenant</span>
+</div>
+
+<!-- KPIs -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card p-3">
+            <div class="stat-label">Etablissements</div>
+            <div class="stat-value text-primary">{{ stats.etablissements }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card p-3">
+            <div class="stat-label">Arretes</div>
+            <div class="stat-value" style="color: var(--limule-accent);">{{ stats.arretes }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card p-3">
+            <div class="stat-label">Flux recus</div>
+            <div class="stat-value" style="color: #805ad5;">{{ stats.flux }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card p-3">
+            <div class="stat-label">Exports realises</div>
+            <div class="stat-value" style="color: var(--limule-success);">{{ stats.exports }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Métriques lignes -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card p-3 border-start border-4 border-info">
+            <div class="stat-label">Total lignes</div>
+            <div class="stat-value">{{ "{:,}".format(stats.total_rows|int) }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card p-3 border-start border-4 border-success">
+            <div class="stat-label">Lignes valides</div>
+            <div class="stat-value text-success">{{ "{:,}".format(stats.valid_rows|int) }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card p-3 border-start border-4 border-warning">
+            <div class="stat-label">Rejets techniques</div>
+            <div class="stat-value text-warning">{{ "{:,}".format(stats.tech_rejected|int) }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card p-3 border-start border-4 border-danger">
+            <div class="stat-label">Rejets fonctionnels</div>
+            <div class="stat-value text-danger">{{ "{:,}".format(stats.func_rejected|int) }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Barre de progression globale -->
+{% if stats.total_rows > 0 %}
+<div class="card mb-4">
+    <div class="card-body">
+        <h6 class="section-title">Taux de qualite global</h6>
+        {% set pct_valid = (stats.valid_rows / stats.total_rows * 100)|round(1) %}
+        {% set pct_tech = (stats.tech_rejected / stats.total_rows * 100)|round(1) %}
+        {% set pct_func = (stats.func_rejected / stats.total_rows * 100)|round(1) %}
+        <div class="progress" style="height: 28px;">
+            <div class="progress-bar bg-success" style="width: {{ pct_valid }}%">{{ pct_valid }}% valides</div>
+            <div class="progress-bar bg-warning" style="width: {{ pct_tech }}%">{{ pct_tech }}% tech</div>
+            <div class="progress-bar bg-danger" style="width: {{ pct_func }}%">{{ pct_func }}% fonc</div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row g-3">
+    <!-- Derniers arrêtés -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-white"><h6 class="mb-0">Derniers arretes</h6></div>
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0">
+                    <thead><tr><th>Date</th><th>Etablissement</th><th>Statut</th></tr></thead>
+                    <tbody>
+                    {% for a in recent_arretes %}
+                    <tr>
+                        <td>{{ a.date_arrete }}</td>
+                        <td>{{ a.etablissement.code if a.etablissement else '?' }} - {{ a.etablissement.name if a.etablissement else '' }}</td>
+                        <td>
+                            {% if a.status == 'valide' %}
+                                <span class="badge bg-success">Valide</span>
+                            {% elif a.status == 'erreur' %}
+                                <span class="badge bg-danger">Erreur</span>
+                            {% else %}
+                                <span class="badge bg-info">En cours</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="3" class="text-center text-muted py-4">Aucun arrete</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Derniers flux -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-white"><h6 class="mb-0">Derniers flux recus</h6></div>
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0">
+                    <thead><tr><th>Fichier</th><th>Table</th><th>Statut</th><th>Lignes</th></tr></thead>
+                    <tbody>
+                    {% for f in recent_flux %}
+                    <tr>
+                        <td class="text-truncate" style="max-width: 200px;" title="{{ f.file_name }}">{{ f.file_name }}</td>
+                        <td><span class="badge bg-light text-dark">{{ f.table_name }}</span></td>
+                        <td>
+                            {% set s = f.status.value if f.status.value is defined else f.status %}
+                            {% if s == 'func_validated' or s == 'exported' %}
+                                <span class="pipeline-step success"><i class="bi bi-check-circle"></i> {{ s }}</span>
+                            {% elif 'error' in s %}
+                                <span class="pipeline-step error"><i class="bi bi-x-circle"></i> {{ s }}</span>
+                            {% elif 'validat' in s or 'loading' in s %}
+                                <span class="pipeline-step running"><i class="bi bi-arrow-repeat"></i> {{ s }}</span>
+                            {% else %}
+                                <span class="pipeline-step pending"><i class="bi bi-clock"></i> {{ s }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ f.total_lines or 0 }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="4" class="text-center text-muted py-4">Aucun flux</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
