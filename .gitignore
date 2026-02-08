@@ -15,6 +15,7 @@ env/
 data/input/*
 data/output/*
 !data/input/.gitkeep
+!data/input/V2024_01_*.csv
 !data/output/.gitkeep
 .pytest_cache/
 .coverage
