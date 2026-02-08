@@ -25,8 +25,8 @@ for table, f in files:
             f"{BASE}/api/flux/upload",
             data={
                 "etablissement_code": "BNP001",
-                "arrete_date": "2024-01-31",
-                "spec_version": "V2024_01",
+                "date_arrete": "2024-01-31",
+                "version_code": "V2024_01",
                 "table_name": table,
             },
             files={"file": (f, fh, "text/csv")},
